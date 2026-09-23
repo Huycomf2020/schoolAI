@@ -1,6 +1,6 @@
 export const APP_CONFIG = {
   supabaseUrl: "https://ckviatjyhrhfhejugkgs.supabase.co",
-  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImNrdmlhdGp5aHJoZmhlanVna2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTYwNjUsImV4cCI6MjEwNTczMjA2NX0.-JngXSlDr63UYDRMbhaAordyKSuXcDczUrX7WUBcXgU",
+  supabaseAnonKey: "sb_publishable_Ltc5Qw7_DXYmCAVgDjtfAg__TZbF5Yz",
   functionName: "ai-assistant",
   basicPromptLimit: 600,
   basicDailyLimit: 30,

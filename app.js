@@ -43,7 +43,15 @@ $$('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{els.prompt.value=
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close())); $("#switchAdvanced").addEventListener("click",()=>{$("#upgradeDialog").close();setMode("advanced")});
 $("#authButton").addEventListener("click",async()=>{if(state.user){await supabase.auth.signOut(); await syncAuth(); toast("Đã đăng xuất.")}else $("#authDialog").showModal()});
 $("#authForm").addEventListener("submit",async(e)=>{e.preventDefault(); $("#authError").textContent=""; const {error}=await supabase.auth.signInWithPassword({email:$("#email").value,password:$("#password").value}); if(error)return $("#authError").textContent=error.message; $("#authDialog").close(); await syncAuth(); toast("Đăng nhập thành công.")});
-$("#signUpButton").addEventListener("click",async()=>{const {error}=await supabase.auth.signUp({email:$("#email").value,password:$("#password").value}); $("#authError").textContent=error?error.message:"Đã gửi xác nhận. Vui lòng kiểm tra email."});
+$("#signUpButton").addEventListener("click",async()=>{
+  const emailRedirectTo=new URL("./",window.location.href).href;
+  const {error}=await supabase.auth.signUp({
+    email:$("#email").value,
+    password:$("#password").value,
+    options:{emailRedirectTo}
+  });
+  $("#authError").textContent=error?error.message:"Đã gửi xác nhận. Vui lòng kiểm tra email.";
+});
 $("#contextFile").addEventListener("change",async(e)=>{const f=e.target.files[0]; if(!f)return; if(f.size>1024*1024)return toast("Tệp tối đa 1 MB."); $("#context").value=(await f.text()).slice(0,20000); toast("Đã nạp tệp văn bản.")});
 $("#copyButton").addEventListener("click",async()=>{await navigator.clipboard.writeText(state.answer);toast("Đã sao chép.")});
 $("#downloadButton").addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([state.answer],{type:"text/plain;charset=utf-8"}));a.download="hoc-lieu-thcs-loc-ninh.txt";a.click();URL.revokeObjectURL(a.href)});

@@ -13,7 +13,7 @@ export const MODEL_CATALOG = {
     { id: "gpt-6-sol", label: "GPT-6 Sol • cân bằng" }
   ],
   gemini: [
-    { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite • tiết kiệm" },
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash • ổn định" }
+    { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash • ổn định" },
+    { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash • chuyên nghiệp" }
   ]
 };

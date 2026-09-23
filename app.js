@@ -20,7 +20,8 @@ function updateCount(){ const max=state.mode==="basic"?APP_CONFIG.basicPromptLim
 function updateUsage(){ const limit=state.mode==="basic"?APP_CONFIG.basicDailyLimit:APP_CONFIG.advancedDailyLimit; const used=state.usage[state.mode]||0; $("#usageText").textContent=`${used} / ${limit}`; $("#usageBar").style.width=`${Math.min(100,used/limit*100)}%`; }
 function reset(){ els.prompt.value=""; $("#context").value=""; state.answer=""; els.result.hidden=true; updateCount(); }
 async function loadUsage(){ if(!state.user)return; const {data}=await supabase.from("usage_events").select("mode").gte("created_at",new Date(Date.now()-86400000).toISOString()); state.usage={basic:0,advanced:0}; (data||[]).forEach(x=>state.usage[x.mode]++); updateUsage(); }
-async function syncAuth(){ const {data:{session}}=await supabase.auth.getSession(); state.user=session?.user||null; $("#authButton").textContent=state.user?"Đăng xuất":"Đăng nhập"; await loadUsage(); }
+function applySession(session){ state.user=session?.user||null; $("#authButton").textContent=state.user?"Đăng xuất":"Đăng nhập"; }
+async function syncAuth(){ const {data:{session}}=await supabase.auth.getSession(); applySession(session); if(state.user)await loadUsage(); }
 async function submit(){
   const prompt=els.prompt.value.trim(); if(!prompt)return toast("Thầy/cô vui lòng nhập yêu cầu.");
   if(state.mode==="basic" && prompt.length>APP_CONFIG.basicPromptLimit){ $("#upgradeDialog").showModal(); return; }
@@ -47,8 +48,20 @@ async function submit(){
 $$('.mode-card').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode))); els.prompt.addEventListener("input",updateCount); els.provider.addEventListener("change",renderModels); $("#sendButton").addEventListener("click",submit); $("#clearButton").addEventListener("click",reset);
 $$('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{els.prompt.value=b.dataset.prompt;updateCount();els.prompt.focus()}));
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close())); $("#switchAdvanced").addEventListener("click",()=>{$("#upgradeDialog").close();setMode("advanced")});
-$("#authButton").addEventListener("click",async()=>{if(state.user){await supabase.auth.signOut(); await syncAuth(); toast("Đã đăng xuất.")}else $("#authDialog").showModal()});
-$("#authForm").addEventListener("submit",async(e)=>{e.preventDefault(); $("#authError").textContent=""; const {error}=await supabase.auth.signInWithPassword({email:$("#email").value,password:$("#password").value}); if(error)return $("#authError").textContent=error.message; $("#authDialog").close(); await syncAuth(); toast("Đăng nhập thành công.")});
+$("#authButton").addEventListener("click",async()=>{if(state.user){const {error}=await supabase.auth.signOut(); if(error)return toast(`Chưa thể đăng xuất: ${error.message}`); applySession(null); state.usage={basic:0,advanced:0}; updateUsage(); toast("Đã đăng xuất.")}else $("#authDialog").showModal()});
+$("#authForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const button=e.submitter||$("#authForm button[type='submit']");
+  $("#authError").textContent=""; button.disabled=true;
+  try{
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("Máy chủ đăng nhập không phản hồi sau 15 giây.")),15000));
+    const {data,error}=await Promise.race([supabase.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#password").value}),timeout]);
+    if(error)throw error;
+    applySession(data.session); $("#authDialog").close(); toast("Đăng nhập thành công.");
+    setTimeout(()=>loadUsage(),0);
+  }catch(error){ $("#authError").textContent=error.message||"Không thể đăng nhập."; }
+  finally{ button.disabled=false; }
+});
 $("#signUpButton").addEventListener("click",async()=>{
   const emailRedirectTo=new URL("./",window.location.href).href;
   const {error}=await supabase.auth.signUp({
@@ -61,4 +74,9 @@ $("#signUpButton").addEventListener("click",async()=>{
 $("#contextFile").addEventListener("change",async(e)=>{const f=e.target.files[0]; if(!f)return; if(f.size>1024*1024)return toast("Tệp tối đa 1 MB."); $("#context").value=(await f.text()).slice(0,20000); toast("Đã nạp tệp văn bản.")});
 $("#copyButton").addEventListener("click",async()=>{await navigator.clipboard.writeText(state.answer);toast("Đã sao chép.")});
 $("#downloadButton").addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([state.answer],{type:"text/plain;charset=utf-8"}));a.download="hoc-lieu-thcs-loc-ninh.txt";a.click();URL.revokeObjectURL(a.href)});
-renderModels(); setMode("basic"); syncAuth(); supabase.auth.onAuthStateChange(()=>syncAuth());
+renderModels(); setMode("basic"); syncAuth();
+supabase.auth.onAuthStateChange((_event,session)=>{
+  applySession(session);
+  if(session)setTimeout(()=>loadUsage(),0);
+  else{state.usage={basic:0,advanced:0};updateUsage();}
+});

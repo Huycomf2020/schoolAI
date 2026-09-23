@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Content-Type":"application/json"};
-const models={openai:new Set(["gpt-6-luna","gpt-6-sol"]),gemini:new Set(["gemini-2.5-flash-lite","gemini-2.5-flash"])};
+const models={openai:new Set(["gpt-6-luna","gpt-6-sol"]),gemini:new Set(["gemini-3.6-flash","gemini-3.8-flash"])};
 const SYSTEM=`Bạn là trợ lý học liệu nội bộ của Trường THCS Lộc Ninh. Viết tiếng Việt chuẩn, rõ ràng, phù hợp môi trường THCS. Ưu tiên tính chính xác, khả thi, cấu trúc khoa học. Không bịa văn bản pháp lý; khi chưa chắc phải nói rõ cần kiểm tra. Không tiết lộ dữ liệu cá nhân hoặc hướng dẫn gây hại.`;
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:cors});
 
@@ -18,7 +18,7 @@ Deno.serve(async(req)=>{
     if(!prompt)return json({error:"Yêu cầu trống."},400); if(mode==="basic"&&prompt.length>600)return json({upgradeRequired:true},200); if(prompt.length>8000)return json({error:"Yêu cầu quá dài."},400);
     const limit=mode==="basic"?30:15; const since=new Date(Date.now()-86400000).toISOString();
     const {count}=await sb.from("usage_events").select("id",{count:"exact",head:true}).eq("mode",mode).gte("created_at",since); if((count||0)>=limit)return json({error:"Đã đạt hạn mức 24 giờ."},429);
-    const provider=mode==="basic"?"openai":body.provider==="gemini"?"gemini":"openai"; const fallback=provider==="openai"?"gpt-6-luna":"gemini-2.5-flash-lite"; const model=models[provider].has(body.model)?body.model:fallback;
+    const provider=mode==="basic"?"openai":body.provider==="gemini"?"gemini":"openai"; const fallback=provider==="openai"?"gpt-6-luna":"gemini-3.6-flash"; const model=models[provider].has(body.model)?body.model:fallback;
     const max=Math.min(mode==="basic"?700:4000,Math.max(200,Number(body.maxOutputTokens)||700)); const context=mode==="advanced"?String(body.context||"").slice(0,20000):"";
     const input=context?`NGỮ CẢNH THAM KHẢO:\n${context}\n\nYÊU CẦU:\n${prompt}`:prompt; let text=""; let inputTokens=0,outputTokens=0;
     if(provider==="openai"){

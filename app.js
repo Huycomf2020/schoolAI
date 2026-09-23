@@ -30,7 +30,13 @@ async function submit(){
   const button=$("#sendButton"); button.disabled=true; button.querySelector("span").textContent="Đang tạo..."; els.result.hidden=false; els.result.classList.add("loading"); els.resultContent.textContent="Trợ lý đang tổng hợp nội dung phù hợp...";
   try{
     const body={mode:state.mode,prompt,provider:state.mode==="basic"?"openai":els.provider.value,model:state.mode==="basic"?"gpt-6-luna":els.model.value,maxOutputTokens:state.mode==="basic"?700:Number($("#outputLimit").value),context:state.mode==="advanced"?$("#context").value.trim():""};
-    const {data,error}=await supabase.functions.invoke(APP_CONFIG.functionName,{body}); if(error)throw error;
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("Quá thời gian chờ 60 giây. Hãy kiểm tra Logs của Edge Function.")),60000));
+    const {data,error}=await Promise.race([supabase.functions.invoke(APP_CONFIG.functionName,{body}),timeout]);
+    if(error){
+      let detail=error.message;
+      try{const payload=await error.context.clone().json();detail=payload.error||detail}catch{}
+      throw new Error(detail);
+    }
     if(data?.upgradeRequired){ $("#upgradeDialog").showModal(); els.result.hidden=true; return; }
     if(!data?.text)throw new Error(data?.error||"Không nhận được nội dung.");
     state.answer=data.text; els.resultContent.textContent=state.answer; state.usage[state.mode]=(state.usage[state.mode]||0)+1; updateUsage();

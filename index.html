@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Trợ lý học liệu nội bộ Trường THCS Lộc Ninh">
+  <meta name="theme-color" content="#06364b">
+  <title>Trợ lý học liệu • THCS Lộc Ninh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Trang chủ">
+        <span class="brand-mark">LN</span>
+        <span><strong>THCS Lộc Ninh</strong><small>Trợ lý học liệu nội bộ</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="status-dot"><i></i><span id="systemStatus">Sẵn sàng</span></span>
+        <button class="ghost-btn" id="authButton">Đăng nhập</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <span class="eyebrow">KHÔNG GIAN LÀM VIỆC SỐ</span>
+          <h1>Soạn học liệu nhanh,<br><em>đúng chất nhà trường.</em></h1>
+          <p>Hỗ trợ giáo viên xây dựng kế hoạch, phiếu học tập, câu hỏi và tài liệu quản lý — an toàn, có kiểm soát chi phí.</p>
+        </div>
+        <div class="hero-meta">
+          <div><strong>02</strong><span>chế độ linh hoạt</span></div>
+          <div><strong>2×</strong><span>nhà cung cấp AI</span></div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="sidebar">
+          <p class="side-label">CHỌN CHẾ ĐỘ</p>
+          <button class="mode-card active" data-mode="basic">
+            <span class="mode-icon">01</span><span><b>Cơ bản</b><small>Lệnh ngắn, trả lời gọn</small></span><i>›</i>
+          </button>
+          <button class="mode-card" data-mode="advanced">
+            <span class="mode-icon">02</span><span><b>Nâng cao</b><small>Ngữ cảnh & học liệu dài</small></span><i>›</i>
+          </button>
+          <div class="usage-card">
+            <div class="usage-title"><span>Lượt dùng hôm nay</span><b id="usageText">0 / 30</b></div>
+            <div class="progress"><i id="usageBar"></i></div>
+            <small>Hạn mức giúp toàn trường sử dụng công bằng.</small>
+          </div>
+          <div class="privacy-note"><span>◈</span><p><b>Dữ liệu nội bộ</b><br>Không nhập thông tin nhạy cảm của học sinh.</p></div>
+        </aside>
+
+        <div class="assistant-panel">
+          <div class="panel-head">
+            <div><span class="live-badge"><i></i> TRỢ LÝ ĐANG HOẠT ĐỘNG</span><h2 id="modeTitle">Hỏi nhanh — làm ngay</h2><p id="modeDescription">Phù hợp với câu lệnh ngắn và nội dung vừa phải.</p></div>
+            <button class="icon-btn" id="clearButton" title="Xóa nội dung" aria-label="Xóa nội dung">↻</button>
+          </div>
+
+          <div class="quick-prompts" id="quickPrompts">
+            <button data-prompt="Soạn 5 câu hỏi trắc nghiệm môn Toán lớp 7 về tỉ lệ thức, có đáp án.">5 câu trắc nghiệm</button>
+            <button data-prompt="Viết thông báo ngắn gửi phụ huynh về lịch họp cuối học kỳ.">Thông báo phụ huynh</button>
+            <button data-prompt="Gợi ý hoạt động khởi động 5 phút cho tiết Ngữ văn THCS.">Khởi động tiết học</button>
+          </div>
+
+          <div class="advanced-options" id="advancedOptions" hidden>
+            <div class="field-grid">
+              <label>Nhà cung cấp<select id="provider"><option value="openai">OpenAI</option><option value="gemini">Google Gemini</option></select></label>
+              <label>Model<select id="model"></select></label>
+              <label>Độ dài đầu ra<select id="outputLimit"><option value="1200">Vừa • 1.200 token</option><option value="2400">Dài • 2.400 token</option><option value="4000">Rất dài • 4.000 token</option></select></label>
+            </div>
+            <label class="context-field">Ngữ cảnh học liệu<textarea id="context" maxlength="20000" placeholder="Dán nội dung chương trình, tài liệu, biểu mẫu hoặc yêu cầu định dạng tại đây..."></textarea><span><input type="file" id="contextFile" accept=".txt,.md,.csv,.json"> Tải tệp văn bản</span></label>
+          </div>
+
+          <label class="prompt-box">
+            <textarea id="prompt" maxlength="8000" placeholder="Nhập yêu cầu của thầy/cô..." rows="7"></textarea>
+            <div class="prompt-footer"><span id="charCount">0 / 600 ký tự</span><button class="primary-btn" id="sendButton"><span>Tạo nội dung</span> →</button></div>
+          </label>
+
+          <article class="result" id="result" hidden>
+            <div class="result-head"><span>KẾT QUẢ</span><div><button id="copyButton">Sao chép</button><button id="downloadButton">Tải .txt</button></div></div>
+            <div id="resultContent"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>Trường THCS Lộc Ninh • Trợ lý phục vụ công tác chuyên môn</span><span>Đề xuất: Phó Hiệu trưởng Tô Thị Mơ</span></footer>
+  </div>
+
+  <dialog id="upgradeDialog">
+    <button class="dialog-close" data-close aria-label="Đóng">×</button>
+    <span class="dialog-icon">↗</span><h3>Yêu cầu này phù hợp với chế độ Nâng cao</h3>
+    <p>Nội dung vượt hạn mức của chế độ Cơ bản. Chuyển sang Nâng cao để dùng ngữ cảnh dài, chọn model và kiểm soát đầu ra.</p>
+    <div class="dialog-actions"><button class="ghost-btn" data-close>Rút gọn yêu cầu</button><button class="primary-btn" id="switchAdvanced">Chuyển sang Nâng cao</button></div>
+  </dialog>
+
+  <dialog id="authDialog">
+    <button class="dialog-close" data-close aria-label="Đóng">×</button>
+    <span class="eyebrow">TÀI KHOẢN NỘI BỘ</span><h3>Đăng nhập để sử dụng AI</h3>
+    <p>Nhập email trường. Nếu chưa có tài khoản, chọn “Tạo tài khoản”.</p>
+    <form id="authForm">
+      <label>Email<input id="email" type="email" autocomplete="email" required></label>
+      <label>Mật khẩu<input id="password" type="password" minlength="8" autocomplete="current-password" required></label>
+      <p class="form-error" id="authError"></p>
+      <div class="dialog-actions"><button type="button" class="ghost-btn" id="signUpButton">Tạo tài khoản</button><button class="primary-btn">Đăng nhập</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

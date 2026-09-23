@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
-import { APP_CONFIG, MODEL_CATALOG } from "./config.js";
+import { APP_CONFIG, MODEL_CATALOG } from "./config.js?v=20260923-pro1";
 
 const supabase = createClient(APP_CONFIG.supabaseUrl, APP_CONFIG.supabaseAnonKey);
 const $ = (s) => document.querySelector(s);
@@ -8,6 +8,14 @@ const state = { mode: "basic", user: null, usage: { basic: 0, advanced: 0 }, ans
 const els = { prompt: $("#prompt"), result: $("#result"), resultContent: $("#resultContent"), provider: $("#provider"), model: $("#model") };
 
 function toast(message) { const el=$("#toast"); el.textContent=message; el.classList.add("show"); clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2600); }
+function renderAnswer(text){
+  const html=window.marked?window.marked.parse(text,{gfm:true,breaks:true}):text.replace(/\n/g,"<br>");
+  els.resultContent.innerHTML=window.DOMPurify?window.DOMPurify.sanitize(html,{ADD_TAGS:["annotation","math","mrow","mi","mo","mn","msup","msub","mfrac","semantics"]}):html;
+  if(window.renderMathInElement)window.renderMathInElement(els.resultContent,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}],throwOnError:false});
+}
+function studioMeta(){return {subject:$("#subject").value,grade:$("#grade").value,materialType:$("#materialType").value,difficulty:$("#difficulty").value,includeAnswers:$("#includeAnswers").checked,teacherVersion:$("#teacherVersion").checked,scienceFormat:$("#scienceFormat").checked};}
+function safeName(){return `${$("#materialType").value}-${$("#subject").value}-lop-${$("#grade").value}`.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/[^a-zA-Z0-9-]+/g,"-").replace(/-+/g,"-").toLowerCase();}
+function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 function renderModels() { els.model.innerHTML=MODEL_CATALOG[els.provider.value].map(m=>`<option value="${m.id}">${m.label}</option>`).join(""); }
 function setMode(mode) {
   state.mode=mode; $$(".mode-card").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
@@ -30,7 +38,7 @@ async function submit(){
   if((state.usage[state.mode]||0)>=limit)return toast("Đã đạt hạn mức hôm nay.");
   const button=$("#sendButton"); button.disabled=true; button.querySelector("span").textContent="Đang tạo..."; els.result.hidden=false; els.result.classList.add("loading"); els.resultContent.textContent="Trợ lý đang tổng hợp nội dung phù hợp...";
   try{
-    const body={mode:state.mode,prompt,provider:state.mode==="basic"?"openai":els.provider.value,model:state.mode==="basic"?"gpt-6-luna":els.model.value,maxOutputTokens:state.mode==="basic"?700:Number($("#outputLimit").value),context:state.mode==="advanced"?$("#context").value.trim():""};
+    const body={mode:state.mode,prompt,...studioMeta(),provider:state.mode==="basic"?"openai":els.provider.value,model:state.mode==="basic"?"gpt-6-luna":els.model.value,maxOutputTokens:state.mode==="basic"?700:Number($("#outputLimit").value),context:state.mode==="advanced"?$("#context").value.trim():""};
     const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("Quá thời gian chờ 60 giây. Hãy kiểm tra Logs của Edge Function.")),60000));
     const {data,error}=await Promise.race([supabase.functions.invoke(APP_CONFIG.functionName,{body}),timeout]);
     if(error){
@@ -40,7 +48,7 @@ async function submit(){
     }
     if(data?.upgradeRequired){ $("#upgradeDialog").showModal(); els.result.hidden=true; return; }
     if(!data?.text)throw new Error(data?.error||"Không nhận được nội dung.");
-    state.answer=data.text; els.resultContent.textContent=state.answer; state.usage[state.mode]=(state.usage[state.mode]||0)+1; updateUsage();
+    state.answer=data.text; renderAnswer(state.answer); state.usage[state.mode]=(state.usage[state.mode]||0)+1; updateUsage();
   }catch(e){ els.resultContent.textContent=`Chưa thể kết nối trợ lý: ${e.message}. Vui lòng kiểm tra Edge Function và khóa API.`; }
   finally{ els.result.classList.remove("loading"); button.disabled=false; button.querySelector("span").textContent="Tạo nội dung"; }
 }
@@ -73,7 +81,22 @@ $("#signUpButton").addEventListener("click",async()=>{
 });
 $("#contextFile").addEventListener("change",async(e)=>{const f=e.target.files[0]; if(!f)return; if(f.size>1024*1024)return toast("Tệp tối đa 1 MB."); $("#context").value=(await f.text()).slice(0,20000); toast("Đã nạp tệp văn bản.")});
 $("#copyButton").addEventListener("click",async()=>{await navigator.clipboard.writeText(state.answer);toast("Đã sao chép.")});
-$("#downloadButton").addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([state.answer],{type:"text/plain;charset=utf-8"}));a.download="hoc-lieu-thcs-loc-ninh.txt";a.click();URL.revokeObjectURL(a.href)});
+$("#downloadButton").addEventListener("click",()=>downloadBlob(new Blob([state.answer],{type:"text/plain;charset=utf-8"}),safeName()+".txt"));
+$("#docxButton").addEventListener("click",()=>{
+  if(!state.answer)return toast("Chưa có học liệu để xuất.");
+  if(!window.htmlDocx)return toast("Thư viện Word chưa tải xong, vui lòng tải lại trang.");
+  const meta=studioMeta();
+  const html=`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:2cm}body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.5;color:#000}h1,h2,h3{font-size:14pt}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px}th{background:#e8eeee}.doc-meta{font-size:10pt;color:#555;border-bottom:1px solid #777;padding-bottom:8px;margin-bottom:14px}</style></head><body><div class="doc-meta">TRƯỜNG THCS LỘC NINH · ${meta.subject} · Lớp ${meta.grade} · ${meta.materialType}</div>${els.resultContent.innerHTML}</body></html>`;
+  const blob=window.htmlDocx.asBlob(html,{orientation:"portrait",margins:{top:1134,right:1134,bottom:1134,left:1134}});
+  downloadBlob(blob,safeName()+".docx"); toast("Đã tạo file Word.");
+});
+$("#pdfButton").addEventListener("click",async()=>{
+  if(!state.answer)return toast("Chưa có học liệu để xuất.");
+  if(!window.html2pdf)return window.print();
+  const clone=els.resultContent.cloneNode(true); const wrapper=document.createElement("div");
+  wrapper.style.cssText='font-family:"Times New Roman",serif;font-size:12pt;line-height:1.5;color:#000;padding:10px'; wrapper.appendChild(clone);
+  await window.html2pdf().set({margin:12,filename:safeName()+".pdf",image:{type:"jpeg",quality:.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(wrapper).save();
+});
 renderModels(); setMode("basic"); syncAuth();
 supabase.auth.onAuthStateChange((_event,session)=>{
   applySession(session);
